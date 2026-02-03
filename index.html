@@ -1,0 +1,173 @@
+<html lang="en"><head>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BJ Community 30S MOD PRO</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background: #000; }
+  iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; z-index:1; }
+
+  /* Draggable Box Style */
+  .box {
+    width: 150px; height: auto;
+    background: linear-gradient(135deg, #0f0f1e, #1a1a2e);
+    border: 2px solid #00ffff;
+    border-radius: 16px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.6);
+    color: #00ffff;
+    font-family: 'Segoe UI', sans-serif;
+    text-align: center;
+    padding: 10px 5px;
+    position: fixed; 
+    top: 60px; left: 40px; 
+    z-index: 9999;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .box:active { cursor: grabbing; box-shadow: 0 0 25px rgba(0,255,255,0.9); }
+
+  .title { font-size: 12px; font-weight: bold; background: linear-gradient(90deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; pointer-events: none;}
+  .signal { font-size: 22px; font-weight: bold; opacity: 1; color: yellow; margin-top: 5px; transition: all 0.3s ease; pointer-events: none;}
+  .countdown { font-size: 15px; color: yellow; font-weight: bold; transition: color 0.2s; pointer-events: none;}
+
+  #loginPart input {
+    width: 90px; padding: 5px; background: rgba(0,0,0,0.6); border: 1px solid #00ffff;
+    border-radius: 6px; color: #00ffff; font-size: 12px; text-align: center; margin: 6px;
+  }
+  #loginPart button {
+    padding: 5px 15px; background: linear-gradient(45deg, #00ffff, #00ffaa);
+    color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+  }
+  
+  #wrong { color: #ff0080; font-size: 10px; display:none; margin-top: 5px;}
+  #statusMsg { color: #00ff00; font-size: 9px; margin-top:2px; display:none; }
+  
+  .dev-id { font-size: 9px; color: #555; margin-top: 8px; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<iframe src="https://tkclub2.com/#/register?invitationCode=56186192434"></iframe>
+
+<div class="box" id="signalBox">
+  
+  <div id="loginPart">
+    <div class="title">BJ Community))</div>
+    <div id="statusMsg" style="display:block;">OFFLINE MODE</div>
+    <input type="password" id="passInput" placeholder="Password">
+    <br>
+    <button onclick="attemptLogin()">Login</button>
+    <div id="wrong">Wrong Pass!</div>
+    <div class="dev-id">ID: <span id="myDevId">U-76102</span></div>
+  </div>
+
+  <div id="signalPart" style="display:none;">
+    <div class="title">BJ Community</div>
+    <div id="currentTime">--:--:--</div>
+    <div class="countdown"><span id="countdown">30</span>s</div>
+    <div class="signal" id="predicted">-</div>
+  </div>
+
+</div>
+
+<script>
+  // --- PASSWORD CONFIG ---
+  const FIXED_PASSWORD = "harryvip";
+
+  // --- DEVICE ID GENERATION ---
+  let deviceId = localStorage.getItem("bj_device_id");
+  if (!deviceId) {
+    deviceId = "U-" + Math.floor(Math.random() * 1000000);
+    localStorage.setItem("bj_device_id", deviceId);
+  }
+  document.getElementById("myDevId").innerText = deviceId;
+
+  // --- LOGIN FUNCTION ---
+  window.attemptLogin = function() {
+    let inputPass = document.getElementById("passInput").value;
+    if(inputPass === FIXED_PASSWORD) {
+      document.getElementById("loginPart").style.display = "none";
+      document.getElementById("signalPart").style.display = "block";
+      startSignal();
+    } else {
+      let w = document.getElementById("wrong");
+      w.style.display = "block";
+      setTimeout(() => w.style.display = "none", 2000);
+    }
+  }
+
+  // --- DRAGGABLE LOGIC ---
+  const box = document.getElementById("signalBox");
+  let isDragging = false, offsetX, offsetY;
+
+  // Touch Support
+  box.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    let touch = e.touches[0];
+    offsetX = touch.clientX - box.getBoundingClientRect().left;
+    offsetY = touch.clientY - box.getBoundingClientRect().top;
+  }, {passive: false});
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    let touch = e.touches[0];
+    e.preventDefault();
+    let x = touch.clientX - offsetX;
+    let y = touch.clientY - offsetY;
+    if(x < 0) x = 0; if(y < 0) y = 0;
+    if(x + box.offsetWidth > window.innerWidth) x = window.innerWidth - box.offsetWidth;
+    if(y + box.offsetHeight > window.innerHeight) y = window.innerHeight - box.offsetHeight;
+    box.style.left = x + 'px'; box.style.top = y + 'px';
+  }, {passive: false});
+  document.addEventListener('touchend', () => isDragging = false);
+
+  // Mouse Support
+  box.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    offsetX = e.clientX - box.getBoundingClientRect().left;
+    offsetY = e.clientY - box.getBoundingClientRect().top;
+    box.style.cursor = 'grabbing';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    box.style.left = (e.clientX - offsetX) + 'px';
+    box.style.top = (e.clientY - offsetY) + 'px';
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; box.style.cursor = 'grab'; });
+
+  // --- SIGNAL LOGIC ---
+  let currentInterval = -1;
+  function startSignal() { requestAnimationFrame(updateClockAndCountdown); }
+
+  function updateClockAndCountdown() {
+    let now = new Date();
+    let msTotal = now.getTime();
+    let intervalId = Math.floor(msTotal / 30000); // 30 seconds interval
+    
+    if(intervalId !== currentInterval) { 
+      currentInterval = intervalId; 
+      generateSignal(); 
+    }
+    
+    let countdown = 30 - ((msTotal % 30000) / 1000);
+    document.getElementById("countdown").innerHTML = Math.ceil(countdown);
+    document.getElementById("countdown").style.color = (Math.ceil(countdown) <= 5) ? "#ff0000" : "yellow";
+    document.getElementById("currentTime").innerHTML = now.toLocaleTimeString();
+    requestAnimationFrame(updateClockAndCountdown);
+  }
+
+  function generateSignal() {
+    let list = ["BIG 5,7", "SMALL 3,0", "SMALL 4,1", "BIG 8,9", "BIG 7,9", "SMALL 0,2", "BIG 5,8", "BIG 6,8", "SMALL 1,4", "SMALL 2,3"];
+    let random = list[Math.floor(Math.random() * list.length)];
+    let signalEl = document.getElementById("predicted");
+    signalEl.style.color = "#00ff00";
+    setTimeout(() => { signalEl.style.color = "yellow"; }, 300);
+    signalEl.innerHTML = random;
+  }
+</script>
+
+</body></html>
